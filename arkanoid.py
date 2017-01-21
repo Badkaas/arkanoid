@@ -11,7 +11,6 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-
 SURFACE_W, SURFACE_H = 720, 480,
 MARGIN, MARGIN_TOP = 13, 20,
 
@@ -33,7 +32,10 @@ LIFE_OFFSET_Y = 7
 SCORE_OFFSET_X, SCORE_OFFSET_Y = 2, 3
 RULE_OFFSET_Y = 28
 
-SPEED_INCREMENT = 5
+SPEED = 300
+
+timer = pygame.time.Clock()
+pygame.time.set_timer(USEREVENT, 1000)
 
 
 class Ball(pygame.Rect): pass
@@ -42,12 +44,14 @@ class Char(pygame.Rect): pass
 ball = Ball(0, BALL_Y,BALL_H,BALL_W)
 char = Char(0,CHAR_POS_Y,CHAR_W,CHAR_H)
 
-def gen_pos(arg,increase=True):
-    if not increase:
-        yield arg - SPEED_INCREMENT
-    else:
-        yield arg + SPEED_INCREMENT
+game_text = lambda _font, _str, _color: _font.render( _str , 1, _color)
 
+def gen_pos(arg, dt, increase=True):
+    if not increase:
+        arg -=  SPEED * dt
+    else:
+        arg +=  SPEED * dt
+    yield arg
 
 def main(score=0, life=4, char_right=None,
          ball_v=False, ball_h=None):
@@ -63,8 +67,6 @@ def main(score=0, life=4, char_right=None,
     background = background.convert()
     background.fill(WHITE)
 
-
-
     # __
 
 
@@ -76,6 +78,11 @@ def main(score=0, life=4, char_right=None,
     medium_font = pygame.font.Font(None, MEDIUM_FONT_SIZE)
     small_font = pygame.font.Font(None, SMALL_FONT_SISE)
 
+    fps_str = '{}'.format(timer.get_fps())
+    fps_text = game_text(medium_font, fps_str, GRAY)
+    fps_text_pos = fps_text.get_rect()
+    fps_text_pos.centerx = background.get_rect().centerx + 2
+    fps_text_pos.y = 3
 
     # Blit everything to the screen
     screen.blit(background, (0, 0))
@@ -108,12 +115,17 @@ def main(score=0, life=4, char_right=None,
                 char_right = None
             elif event.type == KEYUP and event.key == K_p:
                 pass
+            elif event.type == USEREVENT:
+                fps_str = '{:.2f}'.format(timer.get_fps())
+                fps_text = game_text(medium_font, fps_str, GRAY)
+
 
         # Update scene
         # --------------------------------------------------------------
+        dt = timer.tick(60)/1000
 
         if ball_h is not None:
-            ball_pos_x = gen_pos(ball.x,increase=ball_h)
+            ball_pos_x = gen_pos(ball.x, dt, increase=ball_h)
             ball_x_motion = next(ball_pos_x)
 
             if ball_x_motion < 0:
@@ -124,7 +136,7 @@ def main(score=0, life=4, char_right=None,
                 ball.x = ball_x_motion
 
         if ball_v is not None:
-            ball_pos_y = gen_pos(ball.y,increase=ball_v)
+            ball_pos_y = gen_pos(ball.y, dt, increase=ball_v)
             ball_y_motion = next(ball_pos_y)
 
             if ball_y_motion > SURFACE_H:
@@ -147,7 +159,7 @@ def main(score=0, life=4, char_right=None,
 
 
         if char_right is not None:
-            char_pos_x = gen_pos(char.x,increase=char_right)
+            char_pos_x = gen_pos(char.x, dt, increase=char_right)
             char_x_motion = next(char_pos_x)
 
             if char_x_motion < MARGIN:
@@ -160,6 +172,10 @@ def main(score=0, life=4, char_right=None,
         # Draw screen
         # --------------------------------------------------------------
         screen.blit(background, (0, 0))
+
+        #text
+        screen.blit(fps_text, fps_text_pos)
+
         #ball
         pygame.draw.rect(screen, RED, ball)
 
