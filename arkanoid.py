@@ -48,10 +48,10 @@ game_text = lambda _font, _str, _color: _font.render( _str , 1, _color)
 
 def gen_pos(arg, dt, increase=True):
     if not increase:
-        arg -=  SPEED * dt
+        _c = -1
     else:
-        arg +=  SPEED * dt
-    yield arg
+        _c = 1
+    yield arg + SPEED * dt * _c
 
 def main(score=0, life=4, char_right=None,
          ball_v=False, ball_h=None):
