@@ -124,17 +124,6 @@ def main(score=0, life=4, char_right=None,
         # --------------------------------------------------------------
         dt = timer.tick(60)/1000
 
-        if ball_h is not None:
-            ball_pos_x = gen_pos(ball.x, dt, increase=ball_h)
-            ball_x_motion = next(ball_pos_x)
-
-            if ball_x_motion < 0:
-                ball_h = not ball_h
-            elif ball_x_motion > SURFACE_W - BALL_W:
-                ball_h = not ball_h
-            else:
-                ball.x = ball_x_motion
-
         if ball_v is not None:
             ball_pos_y = gen_pos(ball.y, dt, increase=ball_v)
             ball_y_motion = next(ball_pos_y)
@@ -151,8 +140,21 @@ def main(score=0, life=4, char_right=None,
             else:
                 ball.y = ball_y_motion
 
+
+        if ball_h is not None:
+            ball_pos_x = gen_pos(ball.x, dt, increase=ball_h)
+            ball_x_motion = next(ball_pos_x)
+
+            if ball_x_motion < 0:
+                ball_h = not ball_h
+            elif ball_x_motion > SURFACE_W - BALL_W:
+                ball_h = not ball_h
+            else:
+                ball.x = ball_x_motion
+
         if ball.colliderect(char):
-            ball_v = False
+            if ball_v:
+                ball_v = not ball_v
 
             if ball_h is None:
                 ball_h = True
