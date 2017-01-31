@@ -21,7 +21,7 @@ BALL_W, BALL_H, BALL_Y = 13, 14, 384
 
 BLOCK_W, BLOCK_H = 55, 25
 BLOCKS_GRID, BLOCKS_COLUMNS = 44, 11
-BLOCK_MARGIN_TOP , BLOCKS_MARGIN_LEFT = 36, 29
+BLOCKS_MARGIN_TOP , BLOCKS_MARGIN_LEFT = 36, 29
 
 LARGE_FONT_SIZE = 100
 MEDIUM_FONT_SIZE = 36
@@ -40,9 +40,11 @@ pygame.time.set_timer(USEREVENT, 1000)
 
 class Ball(pygame.Rect): pass
 class Char(pygame.Rect): pass
+class Block(pygame.Rect): pass
 
 ball = Ball(0, BALL_Y,BALL_H,BALL_W)
-char = Char(0,CHAR_POS_Y,CHAR_W,CHAR_H)
+char = Char(0, CHAR_POS_Y, CHAR_W, CHAR_H)
+block = Block(BLOCKS_MARGIN_LEFT, BLOCKS_MARGIN_TOP, BLOCK_W, BLOCK_H)
 
 game_text = lambda _font, _str, _color: _font.render( _str , 1, _color)
 
@@ -72,6 +74,8 @@ def main(score=0, life=4, char_right=None,
 
     char.centerx = background.get_rect().centerx
     ball.centerx = background.get_rect().centerx
+    block.x = BLOCKS_MARGIN_LEFT
+    block.y = BLOCKS_MARGIN_TOP
 
     # Display some text
     large_font = pygame.font.Font(None, LARGE_FONT_SIZE)
@@ -149,6 +153,7 @@ def main(score=0, life=4, char_right=None,
                 ball_h = not ball_h
             elif ball_x_motion > SURFACE_W - BALL_W:
                 ball_h = not ball_h
+
             else:
                 ball.x = ball_x_motion
 
@@ -158,6 +163,28 @@ def main(score=0, life=4, char_right=None,
 
             if ball_h is None:
                 ball_h = True
+
+        if ball.colliderect(block):
+            if ball.top < block.top or ball.bottom > block.bottom:
+
+                if ball.x < block.x:
+                    ball_h = not ball_h
+                    ball.right = block.left - 1
+
+                elif ball.x > block.x + BLOCK_W - BALL_W:
+                    ball_h = not ball_h
+                    ball.left = block.right + 1
+
+                elif ball.top < block.top:
+                    ball_v = not ball_v
+                    ball.bottom = block.top + 1
+
+                else:
+                    ball_v = not ball_v
+                    ball.top = block.bottom + 1
+
+            else:
+                ball_h = not ball_v
 
 
         if char_right is not None:
@@ -184,6 +211,8 @@ def main(score=0, life=4, char_right=None,
         #char
         pygame.draw.rect(screen, BLACK, char)
 
+        #blocks
+        pygame.draw.rect(screen, BLACK, block)
         # Blit everything to the screen
         # --------------------------------------------------------------
 
