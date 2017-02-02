@@ -2,6 +2,7 @@ import time
 import pygame
 from pygame.locals import *
 
+pygame.init()
 
 # Define the colors we will use in RGB format
 BLACK = (0, 0, 0)
@@ -42,24 +43,34 @@ class Ball(pygame.Rect): pass
 class Char(pygame.Rect): pass
 class Block(pygame.Rect): pass
 
-ball = Ball(0, BALL_Y,BALL_H,BALL_W)
+ball = Ball(0, BALL_Y, BALL_H, BALL_W)
 char = Char(0, CHAR_POS_Y, CHAR_W, CHAR_H)
-block = Block(BLOCKS_MARGIN_LEFT, BLOCKS_MARGIN_TOP, BLOCK_W, BLOCK_H)
+
+# __
+
+blocks = []
+
+# append blocks list
+for n in range (BLOCKS_GRID):
+    _x = n % BLOCKS_COLUMNS * (BLOCK_W + 5) + BLOCKS_MARGIN_LEFT
+    _y = n // BLOCKS_COLUMNS * (BLOCK_H + 5) + BLOCKS_MARGIN_TOP
+    block = Block(_x, _y, BLOCK_W, BLOCK_H)
+    blocks.append((_x, _y))
+
+# __
+
+cur_blocks = blocks.copy()
+
 
 game_text = lambda _font, _str, _color: _font.render( _str , 1, _color)
 
-def gen_pos(arg, dt, increase=True):
-    if not increase:
-        _c = -1
-    else:
-        _c = 1
-    yield arg + SPEED * dt * _c
+def ne_pos(arg, dt, increase=True):
+    return arg + SPEED * dt * (1 if increase else -1)
 
 def main(score=0, life=4, char_right=None,
-         ball_v=False, ball_h=None):
+         ball_v=None, ball_h=None):
 
     # Initialise screen
-    pygame.init()
     screen = pygame.display.set_mode((SURFACE_W, SURFACE_H))
     pygame.display.set_caption('Arkanoid')
 
@@ -70,12 +81,8 @@ def main(score=0, life=4, char_right=None,
     background.fill(WHITE)
 
     # __
-
-
     char.centerx = background.get_rect().centerx
     ball.centerx = background.get_rect().centerx
-    block.x = BLOCKS_MARGIN_LEFT
-    block.y = BLOCKS_MARGIN_TOP
 
     # Display some text
     large_font = pygame.font.Font(None, LARGE_FONT_SIZE)
@@ -96,6 +103,8 @@ def main(score=0, life=4, char_right=None,
     game_over = False
 
     while not game_over:
+
+        dt = min(timer.tick(60)/1000, 0.010)
 
         # Exit events
         # -------------------------------------------------------------
@@ -120,76 +129,76 @@ def main(score=0, life=4, char_right=None,
             elif event.type == KEYUP and event.key == K_p:
                 pass
             elif event.type == USEREVENT:
-                fps_str = '{:.2f}'.format(timer.get_fps())
+                fps_str = '{:.2f} ({})'.format(timer.get_fps(), dt)
                 fps_text = game_text(medium_font, fps_str, GRAY)
 
 
         # Update scene
         # --------------------------------------------------------------
-        dt = timer.tick(60)/1000
 
         if ball_v is not None:
-            ball_pos_y = gen_pos(ball.y, dt, increase=ball_v)
-            ball_y_motion = next(ball_pos_y)
+            ball_y_motion = gen_pos(ball.y, dt, increase=ball_v)
 
             if ball_y_motion > SURFACE_H:
                 ball.centerx = SURFACE_W // 2
                 ball.y = BALL_Y
                 ball_h = None
-                ball_v = True
+                ball_v = False
 
             elif ball_y_motion < MARGIN_TOP:
                 ball_v = not ball_v
 
             else:
                 ball.y = ball_y_motion
-
+        else:
+            ball_v = False
 
         if ball_h is not None:
-            ball_pos_x = gen_pos(ball.x, dt, increase=ball_h)
-            ball_x_motion = next(ball_pos_x)
+            ball_x_motion = gen_pos(ball.x, dt, increase=ball_h)
 
             if ball_x_motion < 0:
                 ball_h = not ball_h
+
             elif ball_x_motion > SURFACE_W - BALL_W:
                 ball_h = not ball_h
 
             else:
                 ball.x = ball_x_motion
 
-        if ball.colliderect(char):
+        if char.colliderect(ball):
             if ball_v:
                 ball_v = not ball_v
 
             if ball_h is None:
                 ball_h = True
 
-        if ball.colliderect(block):
-            if ball.top < block.top or ball.bottom > block.bottom:
+        for _x, _y in (cur_blocks):
+            block = Block(_x,_y , BLOCK_W, BLOCK_H)
+            if ball.colliderect(block):
+                cur_blocks.remove((block.x,block.y))
+                if ball.top < block.top or ball.bottom > block.bottom:
+                    if ball.x < block.x:
+                        ball_h = not ball_h
+                        ball.right = block.left - 1
 
-                if ball.x < block.x:
-                    ball_h = not ball_h
-                    ball.right = block.left - 1
+                    elif ball.x > block.x + BLOCK_W - BALL_W:
+                        ball_h = not ball_h
+                        ball.left = block.right + 1
 
-                elif ball.x > block.x + BLOCK_W - BALL_W:
-                    ball_h = not ball_h
-                    ball.left = block.right + 1
+                    elif ball.top < block.top:
+                        ball_v = not ball_v
+                        ball.bottom = block.top + 1
 
-                elif ball.top < block.top:
-                    ball_v = not ball_v
-                    ball.bottom = block.top + 1
+                    else:
+                        ball_v = not ball_v
+                        ball.top = block.bottom + 1
+                    break
 
                 else:
-                    ball_v = not ball_v
-                    ball.top = block.bottom + 1
-
-            else:
-                ball_h = not ball_v
-
+                    ball_h = not ball_v
 
         if char_right is not None:
-            char_pos_x = gen_pos(char.x, dt, increase=char_right)
-            char_x_motion = next(char_pos_x)
+            char_x_motion = gen_pos(char.x, dt, increase=char_right)
 
             if char_x_motion < MARGIN:
                 char.x = MARGIN + 1
@@ -211,8 +220,11 @@ def main(score=0, life=4, char_right=None,
         #char
         pygame.draw.rect(screen, BLACK, char)
 
-        #blocks
-        pygame.draw.rect(screen, BLACK, block)
+        # blocs
+        for xE, yE in cur_blocks:
+            block = Block(xE, yE, BLOCK_W, BLOCK_H)
+            pygame.draw.rect(screen, BLACK, block)
+
         # Blit everything to the screen
         # --------------------------------------------------------------
 
