@@ -5,6 +5,7 @@ from pygame.locals import *
 # Initialise Pygame
 pygame.init()
 
+
 # Define the colors we will use in RGB format
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -38,6 +39,12 @@ SPEED = 300
 
 timer = pygame.time.Clock()
 pygame.time.set_timer(USEREVENT, 250)
+
+# Display some text
+large_font = pygame.font.Font(None, LARGE_FONT_SIZE)
+medium_font = pygame.font.Font(None, MEDIUM_FONT_SIZE)
+small_font = pygame.font.Font(None, SMALL_FONT_SISE)
+
 
 
 class Ball(pygame.Rect): pass
@@ -85,14 +92,23 @@ def main(score=0, life=4, char_right=None,
     char.centerx = background.get_rect().centerx
     ball.centerx = background.get_rect().centerx
 
-    # Display some text
-    large_font = pygame.font.Font(None, LARGE_FONT_SIZE)
-    medium_font = pygame.font.Font(None, MEDIUM_FONT_SIZE)
-    small_font = pygame.font.Font(None, SMALL_FONT_SISE)
+
+    rule_str = "Press q or d from right to left p for game and Esc for quit."
+
+    rule = game_text(small_font, rule_str, RED)
+    rule_pos = rule.get_rect()
+    rule_pos.centerx = background.get_rect().centerx
+    rule_pos.y = background.get_rect().centery + RULE_OFFSET_Y
+
+    loser_str = 'game over'.upper()
+    loser_text = game_text(large_font, loser_str, GRAY)
+    loser_text_pos = loser_text.get_rect()
+    loser_text_pos.centerx = background.get_rect().centerx + 2
+    loser_text_pos.centery = background.get_rect().centery
 
     score = score
     cur_life = life
- 
+
     score_str = "Score: {:05d}".format(score)
     score_text = game_text(medium_font, score_str, GRAY)
     score_text_pos = score_text.get_rect()
@@ -105,6 +121,7 @@ def main(score=0, life=4, char_right=None,
 
     # Event loop
     game_over = False
+    death = False
 
     while not game_over:
 
@@ -136,6 +153,7 @@ def main(score=0, life=4, char_right=None,
                 score_str = "Score: {:05d}".format(score)
                 score_text = game_text(medium_font, score_str, GRAY)
 
+
                 # fps_str = '{:.2f} ({})'.format(timer.get_fps(), dt)
                 # fps_text = game_text(medium_font, fps_str, GRAY)
                 pass
@@ -149,9 +167,13 @@ def main(score=0, life=4, char_right=None,
             if ball_y_motion > SURFACE_H:
                 ball.centerx = SURFACE_W // 2
                 ball.y = BALL_Y
-                ball_h = None
                 ball_v = False
+                ball_h = None
                 cur_life -= 1
+
+                if cur_life == 0:
+                    death = not death
+
             elif ball_y_motion < MARGIN_TOP:
                 ball_v = not ball_v
 
@@ -173,7 +195,8 @@ def main(score=0, life=4, char_right=None,
                 ball.x = ball_x_motion
 
         if char.colliderect(ball):
-            score += 10
+            if not death:
+                score += 10
             if ball_v:
                 ball_v = not ball_v
 
@@ -183,8 +206,10 @@ def main(score=0, life=4, char_right=None,
         for _x, _y in (cur_blocks):
             block = Block(_x,_y , BLOCK_W, BLOCK_H)
             if ball.colliderect(block):
-                score += 100
                 cur_blocks.remove((block.x,block.y))
+                if not death:
+                    score += 100
+
                 if ball.top < block.top or ball.bottom > block.bottom:
                     if ball.x < block.x:
                         ball_h = not ball_h
@@ -210,7 +235,8 @@ def main(score=0, life=4, char_right=None,
             char_x_motion = new_pos(char.x, dt, increase=char_right)
 
             if char_x_motion < MARGIN:
-                char.x = MARGIN + 1
+                if not death:
+                    char.x = MARGIN + 1
             elif char_x_motion > SURFACE_W - MARGIN - CHAR_W:
                 char.x = SURFACE_W - MARGIN - CHAR_W - 1
             else:
@@ -239,6 +265,10 @@ def main(score=0, life=4, char_right=None,
         for xE, yE in cur_blocks:
             block = Block(xE, yE, BLOCK_W, BLOCK_H)
             pygame.draw.rect(screen, BLACK, block)
+
+        if death:
+            screen.blit(loser_text, loser_text_pos)
+            screen.blit(rule, rule_pos)
 
         # Blit everything to the screen
         # --------------------------------------------------------------
