@@ -2,6 +2,7 @@ import time
 import pygame
 from pygame.locals import *
 
+# Initialise Pygame
 pygame.init()
 
 # Define the colors we will use in RGB format
@@ -36,12 +37,13 @@ RULE_OFFSET_Y = 28
 SPEED = 300
 
 timer = pygame.time.Clock()
-pygame.time.set_timer(USEREVENT, 1000)
+pygame.time.set_timer(USEREVENT, 250)
 
 
 class Ball(pygame.Rect): pass
 class Char(pygame.Rect): pass
 class Block(pygame.Rect): pass
+class LifeCursor(pygame.Rect): pass
 
 ball = Ball(0, BALL_Y, BALL_H, BALL_W)
 char = Char(0, CHAR_POS_Y, CHAR_W, CHAR_H)
@@ -61,10 +63,9 @@ for n in range (BLOCKS_GRID):
 
 cur_blocks = blocks.copy()
 
-
 game_text = lambda _font, _str, _color: _font.render( _str , 1, _color)
 
-def ne_pos(arg, dt, increase=True):
+def new_pos(arg, dt, increase=True):
     return arg + SPEED * dt * (1 if increase else -1)
 
 def main(score=0, life=4, char_right=None,
@@ -89,11 +90,14 @@ def main(score=0, life=4, char_right=None,
     medium_font = pygame.font.Font(None, MEDIUM_FONT_SIZE)
     small_font = pygame.font.Font(None, SMALL_FONT_SISE)
 
-    fps_str = '{}'.format(timer.get_fps())
-    fps_text = game_text(medium_font, fps_str, GRAY)
-    fps_text_pos = fps_text.get_rect()
-    fps_text_pos.centerx = background.get_rect().centerx + 2
-    fps_text_pos.y = 3
+    score = score
+    cur_life = life
+ 
+    score_str = "Score: {:05d}".format(score)
+    score_text = game_text(medium_font, score_str, GRAY)
+    score_text_pos = score_text.get_rect()
+    score_text_pos.centerx = background.get_rect().centerx + 2
+    score_text_pos.y = 3
 
     # Blit everything to the screen
     screen.blit(background, (0, 0))
@@ -104,7 +108,7 @@ def main(score=0, life=4, char_right=None,
 
     while not game_over:
 
-        dt = min(timer.tick(60)/1000, 0.010)
+        dt = timer.tick(60)/1000
 
         # Exit events
         # -------------------------------------------------------------
@@ -129,22 +133,25 @@ def main(score=0, life=4, char_right=None,
             elif event.type == KEYUP and event.key == K_p:
                 pass
             elif event.type == USEREVENT:
-                fps_str = '{:.2f} ({})'.format(timer.get_fps(), dt)
-                fps_text = game_text(medium_font, fps_str, GRAY)
+                score_str = "Score: {:05d}".format(score)
+                score_text = game_text(medium_font, score_str, GRAY)
 
+                # fps_str = '{:.2f} ({})'.format(timer.get_fps(), dt)
+                # fps_text = game_text(medium_font, fps_str, GRAY)
+                pass
 
         # Update scene
         # --------------------------------------------------------------
 
         if ball_v is not None:
-            ball_y_motion = gen_pos(ball.y, dt, increase=ball_v)
+            ball_y_motion = new_pos(ball.y, dt, increase=ball_v)
 
             if ball_y_motion > SURFACE_H:
                 ball.centerx = SURFACE_W // 2
                 ball.y = BALL_Y
                 ball_h = None
                 ball_v = False
-
+                cur_life -= 1
             elif ball_y_motion < MARGIN_TOP:
                 ball_v = not ball_v
 
@@ -154,7 +161,7 @@ def main(score=0, life=4, char_right=None,
             ball_v = False
 
         if ball_h is not None:
-            ball_x_motion = gen_pos(ball.x, dt, increase=ball_h)
+            ball_x_motion = new_pos(ball.x, dt, increase=ball_h)
 
             if ball_x_motion < 0:
                 ball_h = not ball_h
@@ -166,6 +173,7 @@ def main(score=0, life=4, char_right=None,
                 ball.x = ball_x_motion
 
         if char.colliderect(ball):
+            score += 10
             if ball_v:
                 ball_v = not ball_v
 
@@ -175,6 +183,7 @@ def main(score=0, life=4, char_right=None,
         for _x, _y in (cur_blocks):
             block = Block(_x,_y , BLOCK_W, BLOCK_H)
             if ball.colliderect(block):
+                score += 100
                 cur_blocks.remove((block.x,block.y))
                 if ball.top < block.top or ball.bottom > block.bottom:
                     if ball.x < block.x:
@@ -198,7 +207,7 @@ def main(score=0, life=4, char_right=None,
                     ball_h = not ball_v
 
         if char_right is not None:
-            char_x_motion = gen_pos(char.x, dt, increase=char_right)
+            char_x_motion = new_pos(char.x, dt, increase=char_right)
 
             if char_x_motion < MARGIN:
                 char.x = MARGIN + 1
@@ -211,8 +220,14 @@ def main(score=0, life=4, char_right=None,
         # --------------------------------------------------------------
         screen.blit(background, (0, 0))
 
+        for n in range (cur_life):
+            _x = score_text_pos.x - (n * (LIFE_CURSOR_W + 2)) - LIFE_CURSOR_W - 2
+            life_cursor = LifeCursor(_x, LIFE_OFFSET_Y, LIFE_CURSOR_W, LIFE_CURSOR_H)
+            pygame.draw.rect(screen, RED, life_cursor)
+
         #text
-        screen.blit(fps_text, fps_text_pos)
+        screen.blit(score_text, score_text_pos)
+        # screen.blit(fps_text, fps_text_pos)
 
         #ball
         pygame.draw.rect(screen, RED, ball)
