@@ -148,7 +148,16 @@ def main(score=0, life=4, char_right=None,
             elif event.type == KEYUP and event.key == K_d:
                 char_right = None
             elif event.type == KEYUP and event.key == K_p:
-                pass
+
+                if death:
+                    death = not death
+                    cur_life = life
+                    score = 0
+                    ball_v = False
+                    ball_h = None
+                    ball.y = BALL_Y
+                    ball.centerx = background.get_rect().centerx
+
             elif event.type == USEREVENT:
                 score_str = "Score: {:05d}".format(score)
                 score_text = game_text(medium_font, score_str, GRAY)
@@ -161,18 +170,25 @@ def main(score=0, life=4, char_right=None,
         # Update scene
         # --------------------------------------------------------------
 
+        if not death and score ==0:
+            cur_blocks = blocks.copy()
+
+
+
         if ball_v is not None:
             ball_y_motion = new_pos(ball.y, dt, increase=ball_v)
 
             if ball_y_motion > SURFACE_H:
                 ball.centerx = SURFACE_W // 2
                 ball.y = BALL_Y
-                ball_v = False
                 ball_h = None
                 cur_life -= 1
 
                 if cur_life == 0:
                     death = not death
+
+                if not death:
+                    ball_v = False
 
             elif ball_y_motion < MARGIN_TOP:
                 ball_v = not ball_v
